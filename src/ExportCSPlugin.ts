@@ -134,18 +134,19 @@ public partial class ${RowClass} {
 ${foreach(datas, data =>
 		`		new ${RowClass}(${st(() => fields.map((f, index) => 
 			{
-				if(f.name.IndexOf("$") != -1)
-				{
-					return ("$" + genValue(data[index], f));
-				}
-				else if(f.name.IndexOf("$$") != -1)
-				{
-					return ("$$" + genValue(data[index], f));
-				}
-				else
-				{
-					return genValue(data[index], f);
-				}
+				// if(f.name.IndexOf("$") != -1)
+				// {
+				// 	return ("$" + genValue(data[index], f));
+				// }
+				// else if(f.name.IndexOf("$$") != -1)
+				// {
+				// 	return ("$$" + genValue(data[index], f));
+				// }
+				// else
+				// {
+				// 	return genValue(data[index], f);
+				// }
+				return 1;
 			}).join(", "))}),`
 					
 	)}

@@ -1,6 +1,6 @@
 {
-  "name": "export-table-pulgin-csharp",
-  "version": "1.0.40",
+  "name": "faust_export-table-pulgin-csharp",
+  "version": "1.0.1",
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
@@ -8,9 +8,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/windyuuy/export-table-pulgin-csharp.git"
+    "url": "https://github.com/JoeyWangAAA/faust_export_table_plugin_csharp.git"
   },
-  "author": "windyuuy",
+  "author": "faust",
   "license": "ISC",
   "dependencies": {
     "@types/node": "^17.0.18",
