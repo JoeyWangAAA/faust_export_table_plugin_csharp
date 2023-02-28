@@ -1,0 +1,25 @@
+{
+  "name": "export-table-pulgin-csharp",
+  "version": "1.0.40",
+  "description": "",
+  "main": "./dist/index.js",
+  "scripts": {
+    "pub": "npm-publish --token=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"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/windyuuy/export-table-pulgin-csharp.git"
+  },
+  "author": "windyuuy",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^17.0.18",
+    "export-table-lib": "latest",
+    "fs": "^0.0.1-security",
+    "fs-extra": "^10.0.0",
+    "fse": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.13"
+  }
+}
