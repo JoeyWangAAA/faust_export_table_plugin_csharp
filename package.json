@@ -1,5 +1,5 @@
 {
-  "name": "faust_export-table-pulgin-csharp",
+  "name": "export-table-pulgin-custom-csharp",
   "version": "1.0.1",
   "description": "",
   "main": "./dist/index.js",

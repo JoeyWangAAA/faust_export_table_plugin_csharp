@@ -1,11 +1,7 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -18,7 +14,7 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
 };
@@ -32,10 +28,25 @@ function export_stuff(paras) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
     let firstLetterLower = function (str) {
-        return str.charAt(0).toLowerCase() + str.slice(1);
+        var str2 = filterKeyChar(str);
+        return str2.charAt(0).toLowerCase() + str2.slice(1);
     };
     let convMemberName = function (str) {
-        return str.split("_").map(s => firstLetterUpper(s)).join("");
+        var str2 = filterKeyChar(str);
+        //去除_
+        var str3 = str2.split("_").map(s => firstLetterUpper(s)).join("");
+        return str3;
+    };
+    let filterKeyChar = function (str) {
+        //去除$
+        var str1 = str.split("$").map(s => s).join("");
+        //去除#
+        var str2 = str1.split("#").map(s => s).join("");
+        return str2;
+    };
+    let convGetMembetName = function (str) {
+        var str2 = filterKeyChar(str);
+        return "Get" + firstLetterUpper(str2);
     };
     let convVarName = firstLetterLower;
     let RowClass = firstLetterUpper(name);
@@ -91,6 +102,17 @@ function export_stuff(paras) {
     };
     let getFkFieldType = function (field) {
         return tables.find(a => a.name == field.fkTableName).fields.find(a => a.name == field.fkFieldName).type;
+    };
+    const genTranslateValue = (value, f) => {
+        //翻译文本
+        if (f == "$") {
+            value = "$" + value;
+        }
+        //翻译Key值
+        else if (f == "#") {
+            value = "#" + value;
+        }
+        return JSON.stringify(value);
     };
     const genValue = (value, f) => {
         let t = f.type;
@@ -156,18 +178,28 @@ public partial class ${RowClass} {
 
 	public static List<${RowClass}> Configs = new List<${RowClass}>()
 	{
-${(0, export_table_lib_1.foreach)(datas, data => `		new ${RowClass}(${(0, export_table_lib_1.st)(() => fields.map((f, index) => genValue(data[index], f)).join(", "))}),`)}
+${export_table_lib_1.foreach(datas, data => `		new ${RowClass}(${export_table_lib_1.st(() => fields.map((f, index) => {
+        if (f.nameOrigin.indexOf("$") != -1) {
+            return (genTranslateValue(data[index], "$"));
+        }
+        else if (f.nameOrigin.indexOf("#") != -1) {
+            return (genTranslateValue(data[index], "#"));
+        }
+        else {
+            return genValue(data[index], f);
+        }
+    }).join(", "))}),`)}
 	};
 
 	public ${RowClass}() { }
-	public ${RowClass}(${(0, export_table_lib_1.st)(() => fields.map(f => `${getFieldType(f)} ${convVarName(f.name)}`).join(", "))})
+	public ${RowClass}(${export_table_lib_1.st(() => fields.map(f => `${getFieldType(f)} ${convVarName(f.name)}`).join(", "))})
 	{
-${(0, export_table_lib_1.foreach)(fields, f => `		this.${convMemberName(f.name)} = ${convVarName(f.name)};`)}
+${export_table_lib_1.foreach(fields, f => `		this.${convMemberName(f.name)} = ${convVarName(f.name)};`)}
 	}
 
 	public virtual ${RowClass} MergeFrom(${RowClass} source)
 	{
-${(0, export_table_lib_1.foreach)(fields, f => `		this.${convMemberName(f.name)} = source.${convMemberName(f.name)};`)}
+${export_table_lib_1.foreach(fields, f => `		this.${convMemberName(f.name)} = source.${convMemberName(f.name)};`)}
 		return this;
 	}
 
@@ -178,27 +210,47 @@ ${(0, export_table_lib_1.foreach)(fields, f => `		this.${convMemberName(f.name)}
 		return config;
 	}
 
-	${(0, export_table_lib_1.cmm)( /**生成字段 */)}
-${(0, export_table_lib_1.foreach)(fields, f => `
+	${export_table_lib_1.cmm( /**生成字段 */)}
+${export_table_lib_1.foreach(fields, f => `
 	/// <summary>
-${(0, export_table_lib_1.foreach)(getDescripts(f), line => `	/// ${line}`)}
+${export_table_lib_1.foreach(getDescripts(f), line => `	/// ${line}`)}
 	/// </summary>
 	public ${getFieldType(f)} ${convMemberName(f.name)};`)}
 
-	${(0, export_table_lib_1.cmm)( /**生成get字段 */)}
+	${export_table_lib_1.cmm( /**生成get字段 */)}
 #region get字段
-${(0, export_table_lib_1.foreach)(fields, f => {
+${export_table_lib_1.foreach(fields, f => {
         if (f.nameOrigin != f.name) {
             return `	public ${getFieldType(f)} ${getTitle(f).replace(" ", "_")} => ${convMemberName(f.name)};`;
         }
         else {
-            return "";
+            if (f.nameOrigin.indexOf("$") != -1) {
+                return `    public string ${convGetMembetName(f.name)}
+	{
+		get
+		{
+			return Language.Get("${RowClass}_${convMemberName(f.name)}_" + this.${firstLetterUpper(fields[0].name)});
+		}
+	}`;
+            }
+            else if (f.nameOrigin.indexOf("#") != -1) {
+                return `    public string ${convGetMembetName(f.name)}
+	{
+		get
+		{
+			return Language.Get(${convMemberName(f.name)});
+		}
+	}`;
+            }
+            else {
+                return "";
+            }
         }
     })}
 #endregion
 
 #region uid map
-${(0, export_table_lib_1.foreach)(fields, f => {
+${export_table_lib_1.foreach(fields, f => {
         if (f.isUnique) {
             return `
 		protected static Dictionary<${getFieldType(f)}, ${RowClass}> _tempDictBy${convMemberName(f.name)};
@@ -242,9 +294,9 @@ ${(0, export_table_lib_1.foreach)(fields, f => {
 #endregion uid map
 
 #region 生成fk.get/set
-${(0, export_table_lib_1.foreach)(fields, f => `
-${(0, export_table_lib_1.iff)(f.type == "fk", () => `
-${(0, export_table_lib_1.iff)(getFkFieldType(f).toLowerCase() != "uid", () => `
+${export_table_lib_1.foreach(fields, f => `
+${export_table_lib_1.iff(f.type == "fk", () => `
+${export_table_lib_1.iff(getFkFieldType(f).toLowerCase() != "uid", () => `
 	protected ${convMemberName(f.fkTableName)}[] _fk${convMemberName(f.name)}=null;
 	/**
 	 * ${f.describe}
@@ -276,7 +328,7 @@ ${(0, export_table_lib_1.iff)(getFkFieldType(f).toLowerCase() != "uid", () => `
 	}
 `)}
 `)}
-${(0, export_table_lib_1.iff)(f.type == "fk[]", () => `
+${export_table_lib_1.iff(f.type == "fk[]", () => `
 	protected ${convMemberName(f.fkTableName)}[] _fk${convMemberName(f.name)}=null;
 	/**
 	 * ${f.describe}

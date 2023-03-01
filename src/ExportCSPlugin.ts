@@ -18,17 +18,26 @@ export function export_stuff(paras: HandleSheetParams): string | null {
 		return str.charAt(0).toUpperCase() + str.slice(1);
 	};
 	let firstLetterLower = function (str: string) {
-		return str.charAt(0).toLowerCase() + str.slice(1);
+		var str2 = filterKeyChar(str);
+		return str2.charAt(0).toLowerCase() + str2.slice(1);
 	};
 	let convMemberName = function (str: string) {
-		//去除_
-		var str2 : string = str.split("_").map(s => firstLetterUpper(s)).join("");
-		//去除$
-		var str3 : string = str2.split("$").map(s => s).join("");
-		//去除$$
-		var str4 : string = str3.split("$$").map(s => s).join("");
-		return str4; 
+		var str2 = filterKeyChar(str);
+        //去除_
+        var str3 = str2.split("_").map(s => firstLetterUpper(s)).join("");
+        return str3;
 	}
+	let filterKeyChar = function(str : string){
+        //去除$
+        var str1 = str.split("$").map(s => s).join("");
+        //去除#
+        var str2 = str1.split("#").map(s => s).join("");
+        return str2;
+    }
+    let convGetMembetName = function(str : string){
+        var str2 = filterKeyChar(str);
+        return "Get" + firstLetterUpper(str2);
+    }
 	let convVarName = firstLetterLower
 
 	let RowClass = firstLetterUpper(name)
@@ -74,6 +83,18 @@ export function export_stuff(paras: HandleSheetParams): string | null {
 	let getFkFieldType = function (field: Field) {
 		return tables.find(a => a.name == field.fkTableName)!.fields!.find(a => a.name == field.fkFieldName)!.type
 	}
+
+	const genTranslateValue = (value : any, f : string) : string =>{
+        //翻译文本
+        if(f == "$"){
+            value = "$" + value;
+        }
+        //翻译Key值
+        else if(f == "#"){
+            value = "#" + value; 
+        }
+        return JSON.stringify(value)
+    }
 
 	const genValue = (value: any, f: Field): string => {
 		let t = f.type
@@ -131,25 +152,17 @@ public partial class ${RowClass} {
 
 	public static List<${RowClass}> Configs = new List<${RowClass}>()
 	{
-${foreach(datas, data =>
-		`		new ${RowClass}(${st(() => fields.map((f, index) => 
-			{
-				// if(f.name.IndexOf("$") != -1)
-				// {
-				// 	return ("$" + genValue(data[index], f));
-				// }
-				// else if(f.name.IndexOf("$$") != -1)
-				// {
-				// 	return ("$$" + genValue(data[index], f));
-				// }
-				// else
-				// {
-				// 	return genValue(data[index], f);
-				// }
-				return 1;
-			}).join(", "))}),`
-					
-	)}
+${foreach(datas, data =>`		new ${RowClass}(${st(() => fields.map((f, index) => {
+			if(f.nameOrigin.indexOf("$") != -1){
+				return (genTranslateValue(data[index], "$"));
+			}
+			else if(f.nameOrigin.indexOf("#") != -1){
+				return (genTranslateValue(data[index], "#"));
+			}
+			else{
+				return genValue(data[index], f);}
+			}).join(", "))}),`		
+		)}
 	};
 
 	public ${RowClass}() { }
@@ -189,35 +202,34 @@ ${foreach(getDescripts(f), line =>
 #region get字段
 ${foreach(fields, f => {
 		if (f.nameOrigin != f.name) {
-			if(f.name.indexOf("$") != -1)
+			
+			return `	public ${getFieldType(f)} ${getTitle(f).replace(" ", "_")} => ${convMemberName(f.name)};`
+		} 
+		else {
+			if(f.nameOrigin.indexOf("$") != -1)
 			{
-				return `    public string ${getTitle(f).replace(" ", "_")}
-							{
-								get
-								{
-									return Language.Get("${RowClass}_${convMemberName(f.name)}_"${fields[0].name});
-								}
-							}`
-			}
-			else if(f.name.indexOf("$$") != -1)
-			{
-				return `    public string ${getTitle(f).replace(" ", "_")}
-							{
-								get
-								{
-									return Language.Get(${convMemberName(f.name)});
-								}
-							}`
-			}
-			else
-			{
-				return `	public ${getFieldType(f)} ${getTitle(f).replace(" ", "_")} => ${convMemberName(f.name)};`
-			}
-		} else {
-			return ""
+				return `    public string ${convGetMembetName(f.name)}
+	{
+		get
+		{
+			return Language.Get("${RowClass}_${convMemberName(f.name)}_" + this.${firstLetterUpper(fields[0].name)});
 		}
-	}
-	)}
+	}`
+}
+else if(f.nameOrigin.indexOf("#") != -1)
+{
+	return `    public string ${convGetMembetName(f.name)}
+	{
+		get
+		{
+			return Language.Get(${convMemberName(f.name)});
+		}
+	}`
+}
+else
+{
+	return ""
+}}})}
 #endregion
 
 #region uid map
