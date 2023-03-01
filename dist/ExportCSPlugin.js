@@ -22,6 +22,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExportPlugin = exports.export_stuff = void 0;
 const export_table_lib_1 = require("export-table-lib");
 const fs = __importStar(require("fs-extra"));
+var isSkipExportDefaults = process.argv.findIndex(v => v == "--SkipDefaults") >= 0;
 function export_stuff(paras) {
     let { datas, fields, inject, name, objects, packagename, tables, xxtea, } = paras;
     let firstLetterUpper = function (str) {
@@ -56,16 +57,30 @@ function export_stuff(paras) {
     let getFieldType = function (f) {
         let t = f.type;
         if (t == "object") {
-            throw new Error("invalid type <object>");
+            //throw new Error("invalid type <Dictionary<string,string>>")
+            return "Dictionary<string,string>";
         }
         else if (t == "object[]") {
-            throw new Error("invalid type <object[]>");
+            //throw new Error("invalid type <Dictionary<string,string>[]>")
+            return "List<Dictionary<string,string>>";
         }
         else if (t == "number") {
             return "double";
         }
         else if (t == "number[]") {
             return "double[]";
+        }
+        else if (t == "int") {
+            return "int";
+        }
+        else if (t == "int[]") {
+            return "int[]";
+        }
+        else if (t == "long") {
+            return "long";
+        }
+        else if (t == "long[]") {
+            return "long[]";
         }
         else if (t == "uid") {
             return "int";
@@ -90,13 +105,13 @@ function export_stuff(paras) {
         }
         else if (t == "any") {
             console.log(f);
-            throw new Error(`invalid type ${f.name}:<any>`);
+            throw new Error(`invalid type ${f.name}:<${f.rawType} => any>`);
         }
         else if (t == "key") {
             return "string";
         }
         else {
-            throw new Error(`invalid type ${f.name}:<unkown>`);
+            throw new Error(`invalid type ${f.name}:<${f.rawType} => unkown>`);
         }
         return t;
     };
@@ -108,26 +123,45 @@ function export_stuff(paras) {
         if (f == "$") {
             value = "$" + value;
         }
-        //翻译Key值
-        else if (f == "#") {
-            value = "#" + value;
-        }
         return JSON.stringify(value);
     };
     const genValue = (value, f) => {
         let t = f.type;
         if (t == "object") {
-            throw new Error("invalid type <object>");
+            //throw new Error("invalid type <object>")
+            let convert = [];
+            for (let k in value) {
+                convert.push(`{"${k}","${value[k].toString()}"}`);
+            }
+            ;
+            return `new Dictionary<string,string>(){${convert}}`;
         }
         else if (t == "object[]") {
-            throw new Error("invalid type <object[]>");
+            let values = value;
+            //throw new Error("invalid type <object[]>")
+            return `new List<Dictionary<string,string>>(){${values.map((val) => {
+                let convert = [];
+                for (let k in val) {
+                    convert.push(`{"${k}","${val[k].toString()}"}`);
+                }
+                ;
+                return `new Dictionary<string,string>(){${convert}}`;
+            })}}`;
         }
-        else if (t == "number") {
+        else if (t == "number" || t == "int" || t == "long") {
             return `${value}`;
         }
         else if (t == "number[]") {
             let values = value;
             return `new double[]{${values.join(", ")}}`;
+        }
+        else if (t == "int[]") {
+            let values = value;
+            return `new int[]{${values.join(", ")}}`;
+        }
+        else if (t == "long[]") {
+            let values = value;
+            return `new long[]{${values.join(", ")}}`;
         }
         else if (t == "uid") {
             return `${value}`;
@@ -156,12 +190,12 @@ function export_stuff(paras) {
         }
         else if (t == "any") {
             console.log(f);
-            throw new Error(`invalid type ${f.name}:<any>`);
+            throw new Error(`invalid type ${f.name}:<${f.rawType} => any>`);
         }
         else if (t == "key") {
             return `${value}`;
         }
-        throw new Error(`invalid type ${f.name}:<unkown>`);
+        throw new Error(`invalid type ${f.name}:<${f.rawType} => unkown>`);
     };
     const getTitle = (v) => {
         return v.describe.split("\n")[0];
@@ -238,7 +272,7 @@ ${export_table_lib_1.foreach(fields, f => {
 	{
 		get
 		{
-			return Language.Get(${convMemberName(f.name)});
+			return Language.Get(this.${convMemberName(f.name)});
 		}
 	}`;
             }
@@ -307,7 +341,7 @@ ${export_table_lib_1.iff(getFkFieldType(f).toLowerCase() != "uid", () => `
 				if(null==this.${convMemberName(f.name)}){
 					this._fk${convMemberName(f.name)} = new ${convMemberName(f.fkTableName)}[0];
 				}else{
-					this._fk${convMemberName(f.name)}=${convMemberName(f.fkTableName)}.FindAll(a=>a.${convMemberName(f.fkFieldName)}!=null && this.${convMemberName(f.name)}==a.${convMemberName(f.fkFieldName)}).ToArray();
+					this._fk${convMemberName(f.name)}=${convMemberName(f.fkTableName)}.Configs.FindAll(a=>a.${convMemberName(f.fkFieldName)}!=null && this.${convMemberName(f.name)}==a.${convMemberName(f.fkFieldName)}).ToArray();
 				}
 			}
 			return this._fk${convMemberName(f.name)};
@@ -321,7 +355,7 @@ ${export_table_lib_1.iff(getFkFieldType(f).toLowerCase() != "uid", () => `
 	public virtual ${convMemberName(f.fkTableName)} ${convMemberName(f.name)}Data{
 		get{
 			if(this._fk${convMemberName(f.name)}==null){
-				this._fk${convMemberName(f.name)}=${convMemberName(f.fkTableName)}.Find(a=>a.${convMemberName(f.fkFieldName)}==this.${convMemberName(f.name)});
+				this._fk${convMemberName(f.name)}=${convMemberName(f.fkTableName)}.Configs.Find(a=>a.${convMemberName(f.fkFieldName)}==this.${convMemberName(f.name)});
 			}
 			return this._fk${convMemberName(f.name)};
 		}
